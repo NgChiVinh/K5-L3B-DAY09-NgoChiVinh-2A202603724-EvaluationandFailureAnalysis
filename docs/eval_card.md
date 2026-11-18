@@ -36,6 +36,8 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi co
 
 M3: grader của tôi giải thích được **100%** các trial `seeded_regression` fail `pass_rate` (mục tiêu ≥ 80%), và báo nhầm **0%** trên `fixed` (mục tiêu ≤ 10%) (`python -m lab9.mutation --detect`).
 
+Bonus, kiểm chéo harness: 4 grader tiền và approval được port độc lập sang **Inspect AI** (`lab9/inspect_port.py`). Kết quả: **0 bất đồng** trên 980 dòng × 4 grader so với pydantic-evals, gồm 3 probe làm từng grader thật sự bị kích hoạt. Chi tiết ở `docs/bonus_inspect.md`.
+
 - **Judge:** tone_ok κ=0.757, P=0.857, R=0.800, **dùng** (chỉ để theo dõi). helpful κ=0.375, P=1.0, R=0.300, **loại** vì bỏ sót 21/30 reply hỏng, trong đó 18 ca là "sai tiền". Judge không thấy ledger nên không thể chấm tiền; phần này giao cho code `reply_matches_ledger`. Chi tiết ở `docs/judge_audit.md`.
 - **Trace case:** `docs/trace_case.md`, `seeded_regression C-014@11`. Bước sai đầu tiên là **event 5 `proposal` 120.000** (FM-05 pre_deducted): ledger 90.000 so với nhãn 120.000. Regression test là `tests/test_lab9_trace_case.py`.
 - **Gate owner:** Eval owner (Ngô Chí Vĩnh) xử lý khi gate exit 1: đọc dòng BLOCK, chạy `trace_case` trên trial fail, sửa shape. Không bao giờ nới ngưỡng trên cùng eval-set version.
