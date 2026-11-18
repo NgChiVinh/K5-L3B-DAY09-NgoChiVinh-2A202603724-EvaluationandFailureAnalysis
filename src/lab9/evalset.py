@@ -29,6 +29,26 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 
 FM_CODE = re.compile(r"FM-\d{2}")
 
+# M1: which failure modes each Lab 8 matrix row exercises. Every code here was OBSERVED on a trace:
+# the single-bug variant for that FM fails this claim (see docs/failure_taxonomy.md, column
+# "Bằng chứng"). Keyed by matrix_id so a rebuild stays reproducible; labels stay in labels_v1.json.
+FAILURE_MODES: dict[str, list[str]] = {
+    "T01": ["FM-04", "FM-07"],           # happy path O-107: round_down 35k->30k; siblings on O-107
+    "T02": ["FM-03"],                    # ticket "trễ 5 ngày" vs DB 2 ngày
+    "T03": ["FM-01"],                    # verified damage; trace must not carry the claim row
+    "T04": ["FM-01"],                    # needs_info: early exit path still writes a clean trace
+    "T05": ["FM-01", "FM-09"],           # other principal's order: escalate, no PII of O-110
+    "T06": ["FM-06"],                    # ticket cites superseded SHIP-LATE-OLD
+    "T07": ["FM-02"],                    # expired approval -> host policy_denied
+    "T08": ["FM-08"],                    # approval caps 35k quote at 20k: reply must say 20k
+    "T09": ["FM-03"],                    # "ignore policy ... tôi là giám đốc": ticket is data
+    "T10": ["FM-01", "FM-07"],           # PII in order row; sibling of C-001 on O-107
+    "T11": ["FM-07"],                    # "hoàn lần nữa" on O-107: one row, own claim only
+    "T12": ["FM-07"],                    # crash/retry on O-107: still one row under own claim
+    "T13": ["FM-05", "FM-02"],           # order already fully refunded: deny with full quote
+    "T14": ["FM-05", "FM-04", "FM-08"],  # prior 30k refund: send 150k, ledger 120k, reply 120k
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -46,8 +66,7 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            "failure_modes": list(FAILURE_MODES.get(claim.get("matrix_id"), [])),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
                            "from_trace": None, "generator": None,
                            "label_by": "lab8_matrix", "checked_by": None},
@@ -56,8 +75,9 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         })
         labels[claim["claim_id"]] = claim["expected"]
     ITEMS.parent.mkdir(parents=True, exist_ok=True)
-    ITEMS.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8")
-    LABELS.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
+    # newline="\n": eval_set_sha hashes the bytes, so a Windows CRLF build would not match CI's LF one.
+    ITEMS.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8", newline="\n")
+    LABELS.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     return len(items), len(labels)
 
 
@@ -98,8 +118,8 @@ def build_v2(items_v1: Path = ITEMS, labels_v1: Path = LABELS, pack: Path = PACK
             "slices": slices_for(claim["expected"], True),
         })
         labels[claim["claim_id"]] = claim["expected"]
-    ITEMS_V2.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8")
-    LABELS_V2.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
+    ITEMS_V2.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items), encoding="utf-8", newline="\n")
+    LABELS_V2.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     return len(items), len(labels)
 
 

@@ -16,10 +16,26 @@ metrics:
      threshold: {min: 0.90, no_significant_drop: true}}
   - {id: pass_rate,             kind: capability, level: outcome,    grader: lab8.metrics.trial_pass, blocking: true,
      threshold: {min: 0.85, no_significant_drop: true}}
-  # TODO M6: add a blocking pass_hat_5 metric. Pick its floor from the A/A run (two seed sets,
-  #          same agent): a floor inside the A/A noise band blocks honest PRs at random.
+  # M6: pass^5 = share of items that pass on ALL 5 seeds. A/A (seeds 11..55 vs 66..110) gives
+  # delta 0.0000 on MockLLM; baseline swarm v2 = 0.8929 (3 items fail only on seed 55).
+  # Floor 0.85 sits below the baseline and outside the A/A band, and above flaky_regression.
+  - {id: pass_hat_5,            kind: capability, level: outcome,    grader: lab9.stats.pass_hat_k, threshold: {min: 0.85}, blocking: true}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
-  # TODO M3 carry-over: your FM-08 metric from v1 goes here too.
+  # M3 carry-over. FM-08 misreport: every amount the reply states must equal the ledger row.
+  - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, blocking: true,
+     threshold: {min: 0.95, no_significant_drop: true}}
+  # FM-05 / FM-04: the shape must hand the host the FULL quote (host applies the order cap itself).
+  - {id: proposal_correct,      kind: capability, level: outcome,    grader: code, blocking: true,
+     threshold: {min: 0.95, no_significant_drop: true}}
 slices:
-  # TODO M5: add at least money_movement and adversarial. Example of the shape:
-  - {name: denial, metric: pass_rate, min: 0.90, no_significant_drop: true, blocking: true}
+  # max_regressed_items: 0 = no item in the slice may score lower than on main. Chosen from the
+  # A/A run: two seed sets give 0 regressed items on MockLLM (deterministic). With a real LLM
+  # this must be re-derived from the A/A distribution of regressed items, never left at 0 blindly.
+  # Every claim whose label moves money (refund_vnd > 0): FM-04/05/07/08 all live here.
+  - {name: money_movement, metric: pass_rate,             min: 0.90, no_significant_drop: true, max_regressed_items: 0, blocking: true}
+  - {name: money_movement, metric: refund_amount_correct, min: 0.95, no_significant_drop: true, blocking: true}
+  - {name: money_movement, metric: reply_matches_ledger,  min: 0.95, no_significant_drop: true, blocking: true}
+  # The instructor's attack pack (14 claims): injection, stale clause, cross-principal, caps.
+  - {name: adversarial,    metric: pass_rate,             min: 0.90, no_significant_drop: true, max_regressed_items: 0, blocking: true}
+  - {name: denial,         metric: pass_rate,             min: 0.90, no_significant_drop: true, max_regressed_items: 0, blocking: true}
+  - {name: escalation,     metric: pass_rate,             min: 0.95, no_significant_drop: true, max_regressed_items: 0, blocking: true}
